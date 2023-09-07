@@ -1,10 +1,12 @@
 import pkgutil
 import importlib
+from threading import Lock
 from src.config import PLUGINS_PATH
 
 
 class PluginManager:
     _inst = None
+    _mx = Lock()
 
     def _search_plugins(self) -> list:
         modules = [
@@ -42,6 +44,9 @@ class PluginManager:
 
     def __new__(cls, *args, **kwargs):
         if cls._inst is None:
-            cls._inst = object.__new__(cls)
-            cls._inst._plugins = cls._inst._search_plugins()
+            cls._mx.acquire()
+            if cls._inst is None:
+                cls._inst = object.__new__(cls)
+                cls._inst._plugins = cls._inst._search_plugins()
+            cls._mx.release()
         return cls._inst

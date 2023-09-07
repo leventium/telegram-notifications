@@ -4,15 +4,17 @@ from aiogram.enums import ParseMode
 from routers import router
 from config import TOKEN
 from database import MemorySubscriptionRepo
+from notifier import loop
 
 
 async def main():
     bot = Bot(token=TOKEN, parse_mode=ParseMode.MARKDOWN)
     dp = Dispatcher()
-    dp["sub_repo"] = MemorySubscriptionRepo()
+    sub_repo = MemorySubscriptionRepo()
+    dp["sub_repo"] = sub_repo
     dp.include_router(router)
 
-    await dp.start_polling(bot)
+    await asyncio.gather(*[dp.start_polling(bot), loop(bot, sub_repo)])
 
 
 if __name__ == "__main__":

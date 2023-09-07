@@ -14,7 +14,7 @@ class MemorySubscriptionRepo(ISubscriptionRepo):
         logger.debug(self.storage)
 
     async def get_chats_by_sub_name(self, sub: str) -> list[int]:
-        return list(self.storage[sub])
+        return list(self.storage.get(sub, set()))
 
     async def delete_subs_by_chat_id(self, chat_id: int) -> None:
         for event_ids in self.storage.values():
