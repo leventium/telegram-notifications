@@ -83,11 +83,18 @@ async def subscribe(
         return
 
     try:
-        events = PluginManager().get_events_names()
-        subscriptions = [
-            Subscription(message.chat.id, events[sub_number-1])
-            for sub_number in items_to_subscribe
-        ]
+        plug_manager = PluginManager()
+        events = plug_manager.get_events_names()
+        events_statuses = plug_manager.get_events_statuses()
+        subscriptions = []
+
+        for sub_number in items_to_subscribe:
+            event_name = events[sub_number-1]
+            if events_statuses[event_name]:
+                await message.answer(f'"{event_name}" has already happened')
+                continue
+            subscriptions.append(Subscription(message.chat.id, event_name))
+
     except IndexError:
         await message.answer("Number is out of given range. Try again")
         return
@@ -96,24 +103,25 @@ async def subscribe(
         await sub_repo.save(sub)
 
     await state.set_state(ChatProgress.waiting)
-    await message.answer("Ok. I've got it. Wait for notifications")
     await message.answer(
-        "Also. Send \"Update Subscriptions\" to delete "
+        "Ok. I've got it. Wait for notifications"
+        if len(subscriptions) > 0 else
+        "There aren't any new subscriptions"
+    )
+    await message.answer(
+        "Also. Send \"Reset Subscriptions\" to delete "
         "current subscriptions and subscribe again",
         reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="Update Subscriptions")]],
+            keyboard=[[KeyboardButton(text="Reset Subscriptions")]],
             resize_keyboard=True
         )
     )
-    logger.info(
-        f"Chat - {message.chat.id} - "
-        f"subscribed on {items_to_subscribe}"
-    )
+    logger.info(f"New subscriptions: {subscriptions}")
 
 
 @router.message(
     ChatProgress.waiting,
-    F.text.casefold() == "update subscriptions"
+    F.text.casefold() == "reset subscriptions"
 )
 async def update_subscriptions(
         message: Message,
